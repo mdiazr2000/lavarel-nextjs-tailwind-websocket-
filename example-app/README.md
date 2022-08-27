@@ -1,61 +1,111 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+Create database with name: laravel
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+php artisan migrate:refresh
 
-## About Laravel
+php artisan serve
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+php artisan queue:listen
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+For running unit test
+.\vendor\bin\phpunit
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Start the server For websocket
+php artisan websockets:serve
 
-## Learning Laravel
+For websocket
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Laravel WebSockets can be installed via composer:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+composer require beyondcode/laravel-websockets
+The package will automatically register a service provider.
 
-## Laravel Sponsors
+This package comes with a migration to store statistic information while running your WebSocket server. You can publish the migration file using:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="migrations"
+Run the migrations with:
 
-### Premium Partners
+php artisan migrate
+Next, you need to publish the WebSocket configuration file:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[OP.GG](https://op.gg)**
+php artisan vendor:publish --provider="BeyondCode\LaravelWebSockets\WebSocketsServiceProvider" --tag="config"
 
-## Contributing
+composer require pusher/pusher-php-server "~3.0"
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Put BROADCAST_DRIVER with value pusher in .env
+BROADCAST_DRIVER=pusher
 
-## Code of Conduct
+Adding this value could be random values in .env
+PUSHER_APP_ID=insta_pusher
+PUSHER_APP_KEY=123456_key
+PUSHER_APP_SECRET=123456_secret_abc
+PUSHER_APP_CLUSTER=mt1
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+In the file broadcasting.php adding the options parameters
+'pusher' => [
+'driver'  => 'pusher',
+'key'     => env('PUSHER_APP_KEY'),
+'secret'  => env('PUSHER_APP_SECRET'),
+'app_id'  => env('PUSHER_APP_ID'),
+'options' => [
+'cluster' => env('PUSHER_APP_CLUSTER'),
+'useTLS'  => true,
+'host' => '127.0.0.1',
+'port' => 6001,
+'scheme' => 'http',
+'useTLS' => false,
+],
+],
 
-## Security Vulnerabilities
+Add in app/Providers/BroadcastServiceProvider the routes for broadcast
+class BroadcastServiceProvider extends ServiceProvider
+{
+/**
+* Bootstrap any application services.
+*
+* @return void
+  */
+  public function boot()
+  {
+  Broadcast::routes();
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Start the server
+php artisan websockets:serve
 
-## License
+See dashboard
+The default location of the WebSocket dashboard is at SERVER_URL/laravel-websockets
+Ex: http://127.0.0.1:8000/laravel-websockets
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+For create a new broadcasting channel
+Create an event when you setup the private channel
+
+class FileZipped implements ShouldBroadcast
+{
+use Dispatchable, InteractsWithSockets, SerializesModels;
+
+Declare a method broadcastOn in that event set a new PrivateChannel
+public function broadcastOn()
+{
+return new PrivateChannel('fileszipped.'.$this->fileUser->user->email);
+}
+
+Call this event fron the code whenever you want
+event(new FileZipped($this->fileUser));
+
+Go to routes/channels.php
+And declare authorization to the previous created channel
+
+Broadcast::channel('fileszipped.{email}', function ($user, $email) {
+return $user->email == $email; // if this return true you authorize de access to the suscribe and listen to this chanenl
+// return true;
+});
+
+In order to suscribe to a private channel we need authorization
+For avoid cors issues we need to add in config/cors this
+
+'broadcasting/auth'
+
+Stay in this way
+
+'paths' => ['api/*', 'sanctum/csrf-cookie', 'broadcasting/auth'],
+
+For problem with cors add package fruitcake/laravel-cors
