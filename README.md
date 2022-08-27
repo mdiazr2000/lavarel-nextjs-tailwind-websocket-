@@ -15,4 +15,6 @@ Create database with name: laravel
 
 # Mount Frontend Project
 
+`npm install`
+
 `npm run dev`
